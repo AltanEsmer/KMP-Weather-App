@@ -35,7 +35,7 @@ class WeatherViewModel(
         }
     }
 
-    fun fetchWeather(city: String) {
+    fun fetchWeather(city: String, forceRefresh: Boolean = false) {
         viewModelScope.launch {
             _state.value = WeatherState.Loading
 
@@ -48,6 +48,13 @@ class WeatherViewModel(
                         error.message ?: "An unknown error occurred"
                     )
                 }
+        }
+    }
+    
+    fun refreshWeather() {
+        val currentState = _state.value
+        if (currentState is WeatherState.Success) {
+            fetchWeather(currentState.weather.cityName, forceRefresh = true)
         }
     }
 }

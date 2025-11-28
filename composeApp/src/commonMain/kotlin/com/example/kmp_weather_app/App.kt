@@ -1,47 +1,100 @@
 package com.example.kmp_weather_app
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.safeContentPadding
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import org.jetbrains.compose.resources.painterResource
+import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.ui.tooling.preview.Preview
-
-import kmpweatherapp.composeapp.generated.resources.Res
-import kmpweatherapp.composeapp.generated.resources.compose_multiplatform
+import com.example.kmp_weather_app.presentation.weather.WeatherViewModel
+import com.example.kmp_weather_app.presentation.weather.WeatherState
+import org.koin.compose.KoinContext
+import org.koin.compose.koinInject
 
 @Composable
 @Preview
 fun App() {
     MaterialTheme {
-        var showContent by remember { mutableStateOf(false) }
-        Column(
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.primaryContainer)
-                .safeContentPadding()
-                .fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
+        KoinContext {
+            WeatherScreen()
+        }
+    }
+}
+
+@Composable
+fun WeatherScreen(
+    viewModel: WeatherViewModel = koinInject()
+) {
+    val state by viewModel.state.collectAsState()
+    var cityInput by remember { mutableStateOf("") }
+    
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            text = "KMP Weather App - Phase 1",
+            style = MaterialTheme.typography.headlineMedium
+        )
+        
+        OutlinedTextField(
+            value = cityInput,
+            onValueChange = { cityInput = it },
+            label = { Text("Enter city name") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        
+        Button(
+            onClick = { viewModel.fetchWeather(cityInput) },
+            enabled = cityInput.isNotBlank()
         ) {
-            Button(onClick = { showContent = !showContent }) {
-                Text("Click me!")
+            Text("Fetch Weather")
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        when (val currentState = state) {
+            is WeatherState.Idle -> {
+                Text("Enter a city name to fetch weather")
             }
-            AnimatedVisibility(showContent) {
-                val greeting = remember { Greeting().greet() }
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
+            is WeatherState.Loading -> {
+                CircularProgressIndicator()
+            }
+            is WeatherState.Success -> {
+                Card(
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Image(painterResource(Res.drawable.compose_multiplatform), null)
-                    Text("Compose: $greeting")
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = currentState.weather.cityName,
+                            style = MaterialTheme.typography.headlineSmall
+                        )
+                        Text("Temperature: ${currentState.weather.temperature}°C")
+                        Text("Description: ${currentState.weather.description}")
+                        Text("Humidity: ${currentState.weather.humidity}%")
+                        Text("Wind Speed: ${currentState.weather.windSpeed} m/s")
+                    }
+                }
+            }
+            is WeatherState.Error -> {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Text(
+                        text = "Error: ${currentState.message}",
+                        modifier = Modifier.padding(16.dp),
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
                 }
             }
         }

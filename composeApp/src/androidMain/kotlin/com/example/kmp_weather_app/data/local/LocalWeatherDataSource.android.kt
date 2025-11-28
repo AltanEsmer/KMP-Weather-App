@@ -2,18 +2,28 @@ package com.example.kmp_weather_app.data.local
 
 import com.example.kmp_weather_app.domain.model.Weather
 
-class LocalWeatherDataSourceImpl : LocalWeatherDataSource {
-    
-    // Placeholder implementation - will be replaced with Room in Phase 2
-    private var cachedWeather: Weather? = null
+class LocalWeatherDataSourceImpl(
+    private val weatherDao: WeatherDao
+) : LocalWeatherDataSource {
     
     override suspend fun saveWeather(weather: Weather) {
-        cachedWeather = weather
+        try {
+            weatherDao.insertWeather(weather.toEntity())
+        } catch (e: Exception) {
+            throw Exception("Failed to save weather to database: ${e.message}")
+        }
     }
     
     override suspend fun getLastWeather(): Weather? {
-        return cachedWeather
+        return try {
+            weatherDao.getLastWeather()?.toDomain()
+        } catch (e: Exception) {
+            null
+        }
     }
 }
 
-actual fun createLocalWeatherDataSource(): LocalWeatherDataSource = LocalWeatherDataSourceImpl()
+actual fun createLocalWeatherDataSource(): LocalWeatherDataSource {
+    throw IllegalStateException("Use createLocalWeatherDataSource(context) on Android")
+}
+
